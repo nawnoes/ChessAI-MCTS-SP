@@ -7,12 +7,14 @@ import threading
 import tensorflow as tf
 
 class MontecarloTreeSearch():
-    def __init__(self,path, searchRepeatNum=200, searchDepth = 10, expandPoint=1000):
+    def __init__(self,networks, searchRepeatNum=10, searchDepth = 50, expandPoint=1000):
         self.searchDepth = searchDepth
         self.expandPoint = expandPoint
         self.searchRepeatNum = searchRepeatNum
         self.evaluationQueue = []
-        self.tree = TR.Tree(self.PolicyNetwork)
+        self.tree = TR.Tree(networks.getPolicyNetwork())
+        self.rollout = networks.getRollout()
+        self.valueNetwork = networks.getValueNetwork()
 
 
     def set_state(self,Board):
@@ -44,17 +46,17 @@ class MontecarloTreeSearch():
         #selection이 끝난 후 트리가 가리키는 마지막 노드의 값을 Queue에 추가
         job.append(self.tree.get_CurrentNode())
         job.append(self.tree.get_currentBoard())
-        self.evaluationQueue.append(job)
-        print("잡 추가 ")
+
         if not gameOver:
+            self.evaluationQueue.append(job)
             updateNode, rolloutResult , valueNetworkResult = self.evaluation()
-            print("업데이트할 노드: ",updateNode," ",updateNode.get_W_rollout(), " ", updateNode.get_W_value())
-            print("업데이트할 값  : ",rolloutResult,", ",valueNetworkResult)
+            # print("업데이트할 노드: ",updateNode," ",updateNode.get_W_rollout(), " ", updateNode.get_W_value())
+            # print("업데이트할 값  : ",rolloutResult,", ",valueNetworkResult)
             self.backpropagation(updateNode,rolloutResult , valueNetworkResult)
         else:
             #트리생성 중 게임이 종료되면 실제 결과를 적용
             realResult = self.tree.translatedResult()
-            print("realResult: ",realResult)
+            # print("realResult: ",realResult)
             self.backpropagation(self.tree.get_CurrentNode(),realResult, realResult)
 
 
@@ -66,7 +68,7 @@ class MontecarloTreeSearch():
             self.expansion()
             return True
         else:
-            self.tree.makeNextChildByPolicyNetwork()
+            self.tree.makeNextChild()
             # if True == self.tree.get_CurrentNode().get_Color():
             #     print("백")
             # else:
@@ -79,19 +81,19 @@ class MontecarloTreeSearch():
             return False
 
     def evaluation(self):
-        print("평가")
+        # print("평가")
         #evaluationQueue에서 하나씩 평가 진행
         job = self.evaluationQueue.pop(0) # job[0]: 평가되어야할 노드, job[1]: 체스 보드
         updateNode = job[0]
         if updateNode.get_W_rollout() == 0 and updateNode.get_W_value() == 0:
-            print("평가 새로 계산")
+            # print("평가 새로 계산")
             valueNetworkResult = self.valueNetwork.get_ValueNetwork(job[1])
             rolloutResult = self.rolloutSimulation(job[1])
         else:
-            print("평가 재사용")
+            # print("평가 재사용")
             # 평가를 재사용하는 경우 값을 update 노드로 부터 받지 않아도 되지 않나 싶다
-            valueNetworkResult= 0 #updateNode.get_W_value()
-            rolloutResult= 0 #updateNode.get_W_rollout()
+            valueNetworkResult= updateNode.get_W_value() #0
+            rolloutResult= updateNode.get_W_rollout() #0
 
         return updateNode, rolloutResult, valueNetworkResult
 
@@ -117,13 +119,13 @@ class MontecarloTreeSearch():
             move = self.rollout.get_RolloutMove(tmpBoard)
             tmpBoard.push(chess.Move.from_uci(move))
             simulationCount +=1
-            if simulationCount>10:
-                print("롤아웃 결과: ", 0, " 시뮬레이션 수: ", simulationCount)
+            if simulationCount>100:
+                # print("롤아웃 결과: ", 0, " 시뮬레이션 수: ", simulationCount)
                 return 0
         gameOutput = tmpBoard.result()
         #결과는 1-0, 1/2-1/2, 0-1로 나오므로 변환
         gameOutput = self.convertResult(gameOutput)
-        print("롤아웃 결과: ", gameOutput," 시뮬레이션 수: ",simulationCount)
+        # print("롤아웃 결과: ", gameOutput," 시뮬레이션 수: ",simulationCount)
         return gameOutput
     def convertResult(self,result):
         rm = {'1-0': 1, '0-1': -1, '1/2-1/2': 0,'*': 0}

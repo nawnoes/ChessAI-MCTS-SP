@@ -1,7 +1,6 @@
 import os
-import PolicyNetwork.FindFile as FF
-from Board2Array import Board2Array as B2A
-from OneHotEncoding import OneHotEncode as OHE
+from Support.Board2Array import Board2Array as B2A
+from Support.OneHotEncoding import OneHotEncode as OHE
 import chess
 
 class FenLoad:

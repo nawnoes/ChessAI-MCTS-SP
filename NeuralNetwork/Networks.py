@@ -14,8 +14,18 @@ class Networks:
         with tf.Graph().as_default():
             self.valueNetwork = ValueNetwork(path+'Value/')
             self.rollout = Rollout(path+'Rollout/')
-            self.PolicyNetwork = PolicyNetwork(path+'Policy/')
+            self.policyNetwork = PolicyNetwork(path+'Policy/')
+    def getRollout(self):
+        return self.rollout
+    def getValueNetwork(self):
+        return self.valueNetwork
+    def getPolicyNetwork(self):
+        return self.policyNetwork
 
+    def learning(self,input, label, result):
+        self.valueNetwork.learning(input,result)
+        self.rollout.learning(input,label)
+        self.policyNetwork.learning(input,label)
 class PolicyNetwork:
     def __init__(self,path):
         self.sess = tf.Session()
@@ -27,7 +37,7 @@ class PolicyNetwork:
 
         with tf.variable_scope("PN", reuse=False):
             self.X = tf.placeholder(tf.float32, [None, 8, 8, 36], name="X")  # 체스에서 8X8X10 이미지를 받기 위해 64
-            self.K = tf.placeholder(tf.float32, [None], name="K")
+            self.K = tf.placeholder(tf.float32, [None, 4096], name="K")
 
             self.W1 = tf.get_variable("W1", shape=[5, 5, 36, 128], initializer=tf.contrib.layers.xavier_initializer())
             self.B1 = tf.get_variable("B1", initializer=tf.random_normal([128], stddev=0.01))
@@ -125,7 +135,8 @@ class PolicyNetwork:
             self.global_step = int(ckpt.model_checkpoint_path.rsplit('-', 1)[1])
             print(ckpt.model_checkpoint_path)
         print("정책망 로딩 완료")
-
+    def getFilePath(self):
+        return self.policyNetworkFilePath
     def get_PolicyNetwork(self,chessBoard):
         input = self.make_Input(chessBoard)
         output = self.sess.run(self.softmaxOfHypothesis, feed_dict={self.X: input})
@@ -289,7 +300,8 @@ class ValueNetwork:
                 print(ckpt.model_checkpoint_path)
                 self.saver.restore(self.sess, ckpt.model_checkpoint_path)
                 self.global_step = int(ckpt.model_checkpoint_path.rsplit('-', 1)[1])
-
+    def getFilePath(self):
+        return self.valueNetworkFilePath
     def get_ValueNetwork(self,chessBoard):
         input = self.make_Input(chessBoard)
         sigmoid = self.sess.run(self.sigmoidOfHypothesis, feed_dict = {self.X:input})
@@ -316,6 +328,7 @@ class Rollout:
 
         with tf.variable_scope("RO", reuse=False):
             self.X = tf.placeholder(tf.float32, [None, 8, 8, 16], name="X")  # 체스에서 8X8X10 이미지를 받기 위해 64
+            self.K = tf.placeholder(tf.float32, [None, 4096], name="K")
 
             self.W1 = tf.get_variable("W1", shape=[3, 3, 16, 128], initializer=tf.contrib.layers.xavier_initializer())
             self.B1 = tf.get_variable("B1", initializer=tf.random_normal([128], stddev=0.01))
@@ -332,19 +345,32 @@ class Rollout:
 
             self.hypothesis = tf.matmul(self.FlatLayer, self.Flat_W) + self.Flat_B
             self.softmaxOfHypothesis = tf.nn.softmax(self.hypothesis)
+            self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.hypothesis, labels=self.K))
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(self.cost)
+
+            correct_prediction = tf.equal(tf.argmax(self.hypothesis, 1), tf.argmax(self.K, 1))
+            accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32)) * 100
+
+            tf.summary.scalar("Rollout Cost", self.cost)
+            accuracy_summary = tf.summary.scalar("Policy Accuracy", accuracy)
+
+            # Summary
+            self.summary = tf.summary.merge_all()
+            self.sess.run(tf.global_variables_initializer())
 
             self.RO_saves = {rolloutName + "W1": self.W1, rolloutName + "B1": self.B1,
                              rolloutName + "W13": self.W2, rolloutName + "B13": self.B2,
                              rolloutName + "Flat_W": self.Flat_W, rolloutName + "Flat_B": self.Flat_B,
                              }
-
-            saver = tf.train.Saver(self.RO_saves)
+            self.saver = tf.train.Saver(self.RO_saves)
             ckpt = tf.train.get_checkpoint_state(os.path.dirname(self.rolloutFilePath))
             # print(ckpt.model_checkpoint_path)
             if ckpt and ckpt.model_checkpoint_path:
                 # print(ckpt.model_checkpoint_path)
-                saver.restore(self.sess, ckpt.model_checkpoint_path)
-
+                self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+        print("롤아웃 로딩")
+    def getFilePath(self):
+        return self.rolloutFilePath
     def get_Rollout(self, chessBoard):
         input = self.make_Input(chessBoard)
         rollout = self.sess.run(self.softmaxOfHypothesis, feed_dict={self.X: input})
@@ -357,7 +383,8 @@ class Rollout:
         return input
 
     def learning(self,input, label):
-        pass
+        feed_dict = {self.X: input, self.K: label}
+        s, c, _, = self.sess.run([self.summary, self.cost, self.optimizer], feed_dict=feed_dict)
 
     def get_RolloutMove(self,chessBoard):
         softMax = self.get_Rollout(chessBoard)
@@ -368,7 +395,7 @@ class Rollout:
         ohe = OHE()
         i = 0
         child = 0
-        numOfLegalMoves = len(chessBoard.legal_moves)
+        numOfLegalMoves = chessBoard.legal_moves.count()
         numOfChild = 1
 
         # 만드려고 하는 자식 개수보다 가능한 move 갯수가 적을때
@@ -391,4 +418,5 @@ class Rollout:
                 # print(i+1,"번째 선택된 점수 : ",score, " move: ",move)
                 child += 1
             i += 1
+        #할당 되기 전에 참조되어서 오류가 발생하는 경우
         return move

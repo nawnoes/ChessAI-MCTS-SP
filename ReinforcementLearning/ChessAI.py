@@ -15,7 +15,16 @@ class ChessAI :
         self.monte.set_state(Board)
         self.analyze()
         return self.decision
-
+    def refresh(self,move):
+        self.monte.inherit(move)
     def analyze(self):
         self.decision = self.monte.predict()
+
+    def get_MCTS(self, chessBoard):
+        nextMove = self.monte.MCTS(chessBoard)
+
+        return nextMove
+
+    def getNetwork(self):
+        return self.monte.getNetwork
 

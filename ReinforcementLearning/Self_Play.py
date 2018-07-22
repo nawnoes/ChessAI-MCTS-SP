@@ -1,5 +1,4 @@
 import ReinforcementLearning.ChessAI as AI
-from  NeuralNetwork.Networks import DeepPurpleNetwork as DPN
 import chess
 import copy
 import Support.FenLoad as FL
@@ -17,12 +16,8 @@ class Play:
         g = tf.Graph()
         postCheckpointPath = '../Checkpoint/Later/'
         preCheckpointPath = '../Checkpoint/Former/'
-        trainCheckpointPath = postCheckpointPath
         self.LaterAI = AI.ChessAI(postCheckpointPath)
         self.FormerAI = AI.ChessAI(preCheckpointPath)
-        with g.as_default(): #강화학습을 위한 그래프
-            self.trainNetwork = DPN(trainCheckpointPath,is_traing=True)
-
         self.loadFenData= FL.FenLoad()
         self.gameInfo.load()
         self.LIMITofCOUNT = 1
@@ -77,6 +72,30 @@ class Play:
             shutil.copy(previousPath, afterPath)
 
         self.FormerAI.getNetwork().restoreCheckpoint()
+    def moveFile(self,fromPath, toPath):
+        fromPathFileList = os.listdir(fromPath)
+
+        for filename in fromPathFileList:
+            prePath = os.path.join(fromPath, filename)
+            afterPath = os.path.join(toPath, filename)
+            shutil.copy(prePath, afterPath)
+
+    def resettingCheckpoint(self):
+        # Moving Policy checkpoint
+        fromPath = self.LaterAI.networks.getPolicyNetwork().getFilePath()
+        toPath = self.FormerAI.networks.getPolicyNetwork().getFilePath()
+        self.moveFile(fromPath,toPath)
+
+        # Moving Value Checkpoint
+        fromPath = self.LaterAI.networks.getValueNetwork().getFilePath()
+        toPath = self.FormerAI.networks.getValueNetwork().getFilePath()
+        self.moveFile(fromPath, toPath)
+
+        # Moving Rollout checkpoint
+        fromPath = self.LaterAI.networks.getRollout().getFilePath()
+        toPath = self.FormerAI.networks.getRollout().getFilePath()
+        self.moveFile(fromPath, toPath)
+
 
     def playChessForReinforcementLearning(self, num):
         # 펜데이터로 경기가 끝날때 까지 진행
