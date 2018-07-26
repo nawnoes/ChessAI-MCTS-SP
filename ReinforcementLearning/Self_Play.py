@@ -20,7 +20,7 @@ class Play:
         self.FormerAI = AI.ChessAI(preCheckpointPath)
         self.loadFenData= FL.FenLoad()
         self.gameInfo.load()
-        self.LIMITofCOUNT = 1
+        self.LIMITofCOUNT = 1000
     def __del__(self):
         print("")
 
@@ -51,13 +51,8 @@ class Play:
         return copyDatas
 
     def reinforcementLearning(self, fenDatas, turn):
-        input, output, result = self.loadFenData.getDataForRL(fenDatas)
-        # for i in range(2):
-        #     self.currentPolicy.reinforcementLearning(input[i],output[i],result[i])
-        if turn:  # turn이 True일때 백 학습
-            self.trainNetwork.learning(input[0], output[0], result[0])
-        else:  # 흑 학습
-            self.trainNetwork.learning(input[1], output[1], result[1])
+        input, label, result = self.loadFenData.getDataForRL(fenDatas)
+        self.LaterAI.learning(input, label, result)
 
     def resettingPastPolicy(self):
         postPolicyFilePath = self.LaterAI.getNetwork().getFilePath()

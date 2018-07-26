@@ -150,7 +150,7 @@ class PolicyNetwork:
         feed_dict = {self.X: input, self.K: label}
         s, c, _, = self.sess.run([self.summary, self.cost, self.optimizer], feed_dict=feed_dict)
     def saver(self):
-        self.saver.save(self.sess, self.policyNetworkFilePath, global_step=self.global_step+self.batchSize, )
+        self.saver.save(self.sess, self.policyNetworkFilePath, global_step=self.global_step+1, )
     def get_PolicyNetworkMove(self,chessBoard):
         softMax = self.get_PolicyNetwork(chessBoard)
         softMax = np.array(softMax[0])
@@ -317,7 +317,7 @@ class ValueNetwork:
         feed_dict = {self.X: input, self.K: label}
         s, c, _, = self.sess.run([self.summary,self.cost, self.optimizer],feed_dict=feed_dict)
     def saver(self):
-        self.saver.save(self.sess, self.valueNetworkFilePath, global_step=self.global_step+self.batchSize)
+        self.saver.save(self.sess, self.valueNetworkFilePath, global_step=self.global_step+1)
         # writer.add_summary(s, global_step=global_step)
 class Rollout:
     def __init__(self,path):
@@ -385,6 +385,8 @@ class Rollout:
     def learning(self,input, label):
         feed_dict = {self.X: input, self.K: label}
         s, c, _, = self.sess.run([self.summary, self.cost, self.optimizer], feed_dict=feed_dict)
+    def saver(self):
+        self.saver.save(self.sess, self.rolloutFilePath, global_step=self.global_step+1)
 
     def get_RolloutMove(self,chessBoard):
         softMax = self.get_Rollout(chessBoard)
@@ -397,13 +399,14 @@ class Rollout:
         child = 0
         numOfLegalMoves = chessBoard.legal_moves.count()
         numOfChild = 1
+        move =None
 
         # 만드려고 하는 자식 개수보다 가능한 move 갯수가 적을때
         if numOfLegalMoves < numOfChild:
             numOfChild = numOfLegalMoves
 
         for j in range(4096):
-            if child >= numOfChild:  # 만드려고 하는 자식 갯수보다 많으면 반환
+            if child >= numOfChild and move != None:  # 만드려고 하는 자식 갯수보다 많으면 반환
                 break
             try:
                 tmpMove = ohe.indexToMove4096(ArgMaxOfSoftmax[i])
@@ -417,6 +420,5 @@ class Rollout:
                 score = softMax[ArgMaxOfSoftmax[i]]
                 # print(i+1,"번째 선택된 점수 : ",score, " move: ",move)
                 child += 1
+                return move
             i += 1
-        #할당 되기 전에 참조되어서 오류가 발생하는 경우
-        return move
