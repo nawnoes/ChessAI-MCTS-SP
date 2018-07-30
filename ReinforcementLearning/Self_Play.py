@@ -51,8 +51,8 @@ class Play:
         return copyDatas
 
     def reinforcementLearning(self, fenDatas, turn):
-        input, label, result = self.loadFenData.getDataForRL(fenDatas)
-        self.LaterAI.learning(input, label, result)
+        input,rolloutInput, label, result = self.loadFenData.getDataForRL(fenDatas)
+        self.LaterAI.learning(input,rolloutInput, label, result)
 
     def resettingPastPolicy(self):
         postPolicyFilePath = self.LaterAI.getNetwork().getFilePath()
@@ -113,8 +113,8 @@ class Play:
             objgraph.show_most_common_types()
 
 
-            print(self.gameInfo.info)
-            print(type(self.gameInfo.info))
+            # print(self.gameInfo.info)
+            # print(type(self.gameInfo.info))
             if gameCount >self.LIMITofCOUNT:
                 break
             print("---------------")

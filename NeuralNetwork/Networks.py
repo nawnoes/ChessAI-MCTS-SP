@@ -22,10 +22,10 @@ class Networks:
     def getPolicyNetwork(self):
         return self.policyNetwork
 
-    def learning(self,input, label, result):
-        self.valueNetwork.learning(input,result)
-        self.rollout.learning(input,label)
+    def learning(self,input, rolloutInput, label, result):
+        self.rollout.learning(rolloutInput,label)
         self.policyNetwork.learning(input,label)
+        self.valueNetwork.learning(input, result)
 class PolicyNetwork:
     def __init__(self,path):
         self.sess = tf.Session()
@@ -420,5 +420,13 @@ class Rollout:
                 score = softMax[ArgMaxOfSoftmax[i]]
                 # print(i+1,"번째 선택된 점수 : ",score, " move: ",move)
                 child += 1
-                return move
+            else:
+                strMove = strMove+"q"
+                tmpMove=chess.Move.from_uci(strMove)
+                if tmpMove in chessBoard.legal_moves:
+                    move=strMove
+                    score=softMax[ArgMaxOfSoftmax[i]]
+                    # print(i + 1, "번째 선택된 점수 : ", score, " move: ", move)
+                    child += 1
             i += 1
+        return move

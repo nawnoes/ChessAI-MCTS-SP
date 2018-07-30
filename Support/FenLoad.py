@@ -10,6 +10,7 @@ class FenLoad:
         self.board = chess.Board()
     def getDataForRL(self,fenDatas):
         batchsizeInput = []
+        batchSizeRollOut=[]
         batchsizeOutput = []
         batchsizeResult = []
 
@@ -19,10 +20,11 @@ class FenLoad:
             self.board.set_fen(fenInform[0])
 
             batchsizeInput.append(self.b2a.board2array(self.board))
+            batchSizeRollOut.append(self.b2a.board2arrayForRollout(self.board))
             batchsizeOutput.append(self.convertOutput(fenInform[1]))
             batchsizeResult.append(self.convertResultForRL(fenInform[2]))
 
-        return batchsizeInput, batchsizeOutput, batchsizeResult
+        return batchsizeInput, batchSizeRollOut, batchsizeOutput, batchsizeResult
 
 
 

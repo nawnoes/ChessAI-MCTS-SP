@@ -7,7 +7,7 @@ import threading
 import tensorflow as tf
 
 class MontecarloTreeSearch():
-    def __init__(self,networks, searchRepeatNum=10, searchDepth = 50, expandPoint=1000):
+    def __init__(self,networks, searchRepeatNum=5, searchDepth = 50, expandPoint=1000):
         self.searchDepth = searchDepth
         self.expandPoint = expandPoint
         self.searchRepeatNum = searchRepeatNum

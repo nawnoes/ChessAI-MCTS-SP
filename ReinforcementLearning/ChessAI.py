@@ -27,6 +27,6 @@ class ChessAI :
 
     def getNetwork(self):
         return self.monte.getNetwork
-    def learning(self,input, label, result):
-        self.networks.learning(input, label, result)
+    def learning(self,input, rollOutInput, label, result):
+        self.networks.learning(input,rollOutInput, label, result)
 
